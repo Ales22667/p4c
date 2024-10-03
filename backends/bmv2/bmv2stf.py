@@ -488,8 +488,8 @@ class Bmv2StfParser(STFParser):
 # able to invoke the BMV2 simulator, create a CLI file
 # and test packets in pcap files.
 class RunBMV2(object):
-    def __init__(self, folder, options, jsonfile):
-        self.clifile = folder + "/cli.txt"
+    def __init__(self, folder: Path, options, jsonfile: Path) -> None:
+        self.clifile = folder.joinpath("cli.txt")
         self.jsonfile = jsonfile
         self.stffile = None
         self.folder = folder
@@ -517,7 +517,9 @@ class RunBMV2(object):
             self.tables.append(BMV2Table(t))
 
     def filename(self, interface, direction):
-        return self.folder + "/" + self.pcapPrefix + str(interface) + "_" + direction + ".pcap"
+        return self.folder.joinpath(self.pcapPrefix + str(interface) + "_" + direction).with_suffix(
+            ".pcap"
+        )
 
     def interface_of_filename(self, f):
         return int(os.path.basename(f).rstrip(".pcap").lstrip(self.pcapPrefix).rsplit("_", 1)[0])
@@ -686,7 +688,7 @@ class RunBMV2(object):
             result.append("-i " + str(interface) + "@" + self.pcapPrefix + str(interface))
         return result
 
-    def generate_model_inputs(self, stf_map):
+    def generate_model_inputs(self, stf_map: testutils.Dict[str, str]) -> int:
         for entry in stf_map:
             cmd = entry[0]
             if cmd in ["packet", "expect"]:
@@ -711,7 +713,7 @@ class RunBMV2(object):
             if result == 0:
                 return True
 
-    def run(self, stf_map):
+    def run(self, stf_map) -> int:
         testutils.log.info("Running model")
         wait = 0  # Time to wait before model starts running
 
@@ -846,11 +848,13 @@ class RunBMV2(object):
         return rv
 
     def showLog(self):
-        with open(self.folder + "/" + self.switchLogFile + ".txt") as a:
+        """Show the log file"""
+        folder = self.folder.joinpath(self.switchLogFile).with_suffix(".txt")
+        with folder.open() as a:
             log = a.read()
             testutils.log.info("Log file:\n%s", log)
 
-    def checkOutputs(self):
+    def checkOutputs(self) -> int:
         """Checks if the output of the filter matches expectations"""
         testutils.log.info("Comparing outputs")
         direction = "out"
@@ -907,8 +911,8 @@ class RunBMV2(object):
         testutils.log.info("All went well.")
         return testutils.SUCCESS
 
-    def parse_stf_file(self, testfile):
-        with open(testfile) as raw_stf:
+    def parse_stf_file(self, testfile: Path) -> tuple[dict[str, str], int]:
+        with testfile.open() as raw_stf:
             parser = Bmv2StfParser()
             stf_str = raw_stf.read()
             return parser.parse(stf_str)
